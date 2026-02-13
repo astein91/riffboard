@@ -1,0 +1,24 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  background: #0a0a0a;
+  color: #e5e5e5;
+  -webkit-font-smoothing: antialiased;
+}
+input, textarea, button { font: inherit; }
+.prototype-viewer .sp-wrapper,
+.prototype-viewer .sp-layout,
+.prototype-viewer .sp-stack,
+.prototype-viewer .sp-preview-container,
+.prototype-viewer .sp-preview-iframe {
+  height: 100% !important;
+  flex: 1;
+}
+.prototype-viewer .sp-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
