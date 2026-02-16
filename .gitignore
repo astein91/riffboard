@@ -24,3 +24,6 @@ coverage/
 
 # Riffboard project data
 .riffboard/
+
+# Local tool data
+.stacksherpa/
