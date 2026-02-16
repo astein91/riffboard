@@ -3,11 +3,7 @@
   "model": "google/gemini-3-flash-preview",
   "small_model": "google/gemini-3-flash-preview",
   "provider": {
-    "google": {
-      "options": {
-        "apiKey": "REDACTED_GOOGLE_API_KEY"
-      }
-    }
+    "google": {}
   },
   "agent": {
     "prototype": {

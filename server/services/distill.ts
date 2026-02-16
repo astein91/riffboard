@@ -1,10 +1,27 @@
-import fs from "node:fs";
-import path from "node:path";
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 export interface TranscriptMessage {
   role: "user" | "assistant";
   content: string;
 }
+
+function loadEnvFile(): void {
+  const envPath = resolve(process.cwd(), ".env");
+  if (!existsSync(envPath)) return;
+  const lines = readFileSync(envPath, "utf-8").split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim();
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
+
+loadEnvFile();
 
 const SYSTEM_PROMPT = `You are a distillation layer between a human user and a VISUAL MOCKUP generator that builds dummy React + Tailwind prototypes.
 
@@ -35,14 +52,7 @@ You will receive:
 - A list of existing files in the prototype`;
 
 function readApiKey(): string | null {
-  try {
-    const configPath = path.resolve(".opencode/opencode.json");
-    const raw = fs.readFileSync(configPath, "utf-8");
-    const config = JSON.parse(raw);
-    return config?.provider?.google?.options?.apiKey ?? null;
-  } catch {
-    return null;
-  }
+  return process.env.GOOGLE_API_KEY ?? null;
 }
 
 export async function distill(

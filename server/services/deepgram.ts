@@ -20,15 +20,7 @@ function loadEnvFile(): void {
 loadEnvFile();
 
 function resolveApiKey(): string | null {
-  if (process.env.DEEPGRAM_API_KEY) return process.env.DEEPGRAM_API_KEY;
-  try {
-    const cfg = JSON.parse(
-      readFileSync(resolve(process.cwd(), ".opencode/opencode.json"), "utf-8"),
-    );
-    return cfg?.provider?.deepgram?.options?.apiKey ?? null;
-  } catch {
-    return null;
-  }
+  return process.env.DEEPGRAM_API_KEY ?? null;
 }
 
 const DG_PARAMS = new URLSearchParams({
