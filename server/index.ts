@@ -2,13 +2,20 @@ import express from "express";
 import { createServer } from "node:http";
 import cors from "cors";
 import { WebSocketServer, WebSocket } from "ws";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import projectRoutes from "./routes/projects.js";
 import gitRoutes from "./routes/git.js";
 import distillRoutes from "./routes/distill.js";
+import prototypeRoutes from "./routes/prototype.js";
+import apiKeysRoutes from "./routes/apiKeys.js";
 import { killOpenCode } from "./services/opencode.js";
 import { bridgeToDeepgram } from "./services/deepgram.js";
 
-const PORT = 3456;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const PORT = parseInt(process.env.PORT || '3456', 10);
 
 const app = express();
 
@@ -18,6 +25,24 @@ app.use(express.json());
 app.use("/api/projects", projectRoutes);
 app.use("/api/git", gitRoutes);
 app.use("/api", distillRoutes);
+app.use("/api", prototypeRoutes);
+app.use("/api", apiKeysRoutes);
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", service: "riffboard", port: PORT });
+});
+
+// Serve static frontend files in production
+if (process.env.NODE_ENV === 'production') {
+  const distPath = join(__dirname, '..', 'dist');
+  app.use(express.static(distPath));
+
+  // Catch-all route for SPA (serve index.html for any non-API route)
+  app.get('*', (req, res) => {
+    res.sendFile(join(distPath, 'index.html'));
+  });
+}
 
 const server = createServer(app);
 
