@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { authFetch } from '../lib/auth-fetch';
 import { useConversationStore } from './conversation';
 import { usePrototypeStore } from './prototype';
 import { useHistoryStore } from './history';
@@ -70,7 +71,7 @@ async function processQueue(projectId: string) {
 
       // Rotate session after error so next idea gets a fresh context
       try {
-        await fetch(`/api/projects/${projectId}/session/rotate`, { method: 'POST' });
+        await authFetch(`/api/projects/${projectId}/session/rotate`, { method: 'POST' });
       } catch {
         // Best-effort — don't block queue processing
       }

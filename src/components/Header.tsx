@@ -1,7 +1,9 @@
+import { UserButton } from '@clerk/clerk-react';
 import { useProjectStore } from '../stores/project';
 import { useConversationStore } from '../stores/conversation';
 import { useModeStore, type AppMode } from '../stores/mode';
 import { useDistillerStore } from '../stores/distiller';
+import { useSettingsStore } from '../stores/settings';
 
 export function Header() {
   const project = useProjectStore(s => s.activeProject);
@@ -72,6 +74,15 @@ export function Header() {
           }}
           title={mode === 'riff' ? 'Riff mode' : 'Connected'}
         />
+        <button
+          onClick={useSettingsStore.getState().open}
+          style={{
+            background: 'none', border: 'none', color: '#666', cursor: 'pointer',
+            fontSize: 18, padding: '4px 6px', lineHeight: 1,
+          }}
+          title="Settings"
+        >⚙</button>
+        <UserButton afterSignOutUrl="/" />
       </div>
     </header>
   );

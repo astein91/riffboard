@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { authFetch } from '../lib/auth-fetch';
 
 interface Commit {
   sha: string;
@@ -19,29 +20,29 @@ export const useHistoryStore = create<HistoryStore>((set) => ({
   loading: false,
 
   fetchHistory: async (projectId) => {
-    const res = await fetch(`/api/git/${projectId}/log`);
+    const res = await authFetch(`/api/git/${projectId}/log`);
     const commits = await res.json();
     set({ commits });
   },
 
   commitChanges: async (projectId, message) => {
-    await fetch(`/api/git/${projectId}/commit`, {
+    await authFetch(`/api/git/${projectId}/commit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message }),
     });
-    const res = await fetch(`/api/git/${projectId}/log`);
+    const res = await authFetch(`/api/git/${projectId}/log`);
     const commits = await res.json();
     set({ commits });
   },
 
   revertTo: async (projectId, sha) => {
-    await fetch(`/api/git/${projectId}/revert`, {
+    await authFetch(`/api/git/${projectId}/revert`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sha }),
     });
-    const res = await fetch(`/api/git/${projectId}/log`);
+    const res = await authFetch(`/api/git/${projectId}/log`);
     const commits = await res.json();
     set({ commits });
   },

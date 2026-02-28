@@ -2,7 +2,7 @@
   "name": "riffboard",
   "version": "0.2.0",
   "private": true,
-  "description": "Conversational prototyping tool — describe an app, watch it appear",
+  "description": "Conversational prototyping tool \u2014 describe an app, watch it appear",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"pnpm dev:vite\" \"pnpm dev:server\"",
@@ -13,8 +13,12 @@
     "lint": "eslint src server --ext .ts,.tsx"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.3",
+    "@clerk/express": "^1.7.76",
     "@codesandbox/sandpack-react": "^2.19.0",
+    "better-sqlite3": "^12.6.2",
     "cors": "^2.8.5",
+    "drizzle-orm": "^0.45.1",
     "express": "^4.21.0",
     "http-proxy-middleware": "^3.0.0",
     "isomorphic-git": "^1.27.0",
@@ -24,6 +28,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^25.2.3",
@@ -32,9 +37,17 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.3.0",
     "concurrently": "^9.0.0",
+    "drizzle-kit": "^0.31.9",
     "esbuild": "^0.27.3",
     "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "@clerk/shared"
+    ]
   }
 }

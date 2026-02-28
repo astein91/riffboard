@@ -1,0 +1,11 @@
+{
+  "name": "Riffboard",
+  "description": "Conversational prototyping tool — describe an app, watch it appear. Chat or use voice to build React + Tailwind prototypes in real time with AI.",
+  "author": "alexstein",
+  "projectId": "f29tzpwmw9wz",
+  "technologies": ["React", "TypeScript", "Zustand", "Vite", "Express", "Sandpack", "Google Gemini", "Deepgram"],
+  "preview": {
+    "type": "image",
+    "src": "./vibelink-preview.png"
+  }
+}

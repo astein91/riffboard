@@ -32,8 +32,8 @@ Thumbs.db
 # Claude Code
 .claude
 
-# OpenCode
-.opencode
+# OpenCode (keep .opencode — needed at runtime)
+# .opencode
 
 # Stacksherpa
 .stacksherpa

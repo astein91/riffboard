@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { authFetch } from '../lib/auth-fetch';
 
 interface Project {
   id: string;
@@ -23,13 +24,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   fetchProjects: async () => {
     set({ loading: true });
-    const res = await fetch('/api/projects');
+    const res = await authFetch('/api/projects');
     const projects = await res.json();
     set({ projects, loading: false });
   },
 
   createProject: async (name, description = '') => {
-    const res = await fetch('/api/projects', {
+    const res = await authFetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, description }),
@@ -42,7 +43,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   setActiveProject: (project) => set({ activeProject: project }),
 
   deleteProject: async (id) => {
-    await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+    await authFetch(`/api/projects/${id}`, { method: 'DELETE' });
     set(s => ({
       projects: s.projects.filter(p => p.id !== id),
       activeProject: s.activeProject?.id === id ? null : s.activeProject,

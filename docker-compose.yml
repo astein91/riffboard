@@ -2,17 +2,24 @@ version: '3.8'
 
 services:
   riffboard:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
     container_name: riffboard
     ports:
       - "3456:3456"
     volumes:
-      # Persist API keys across container restarts
+      # Persist SQLite DB + project files across container restarts
       - riffboard-data:/data
     environment:
       - NODE_ENV=production
       - PORT=3456
-      - KEYS_FILE=/data/riffboard-keys.json
+      - DB_PATH=/data/riffboard.db
+      - DATA_DIR=/data
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3456/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]

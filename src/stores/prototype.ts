@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { authFetch } from '../lib/auth-fetch';
 import { useConversationStore } from './conversation';
 
 export interface ValidationError {
@@ -34,7 +35,7 @@ export const usePrototypeStore = create<PrototypeStore>((set, get) => ({
   fetchFiles: async (projectId) => {
     set({ loading: true });
     try {
-      const res = await fetch(`/api/projects/${projectId}/files`);
+      const res = await authFetch(`/api/projects/${projectId}/files`);
       const files = await res.json();
       set({ files, loading: false });
     } catch {
@@ -61,7 +62,7 @@ export const usePrototypeStore = create<PrototypeStore>((set, get) => ({
     set({ runtimeError: error, autoFixInProgress: true });
 
     try {
-      const res = await fetch(`/api/projects/${projectId}/fix`, {
+      const res = await authFetch(`/api/projects/${projectId}/fix`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ errorMessage: error }),

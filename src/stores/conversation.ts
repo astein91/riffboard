@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { authFetch } from '../lib/auth-fetch';
 
 export interface Message {
   id: string;
@@ -56,7 +57,7 @@ export const useConversationStore = create<ConversationStore>((set, get) => ({
         content: m.content,
       }));
 
-      const res = await fetch(`/api/projects/${projectId}/prompt`, {
+      const res = await authFetch(`/api/projects/${projectId}/prompt`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

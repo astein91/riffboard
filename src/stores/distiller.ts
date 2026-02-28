@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { authFetch } from '../lib/auth-fetch';
 import { useIdeasStore } from './ideas';
 import { useConversationStore } from './conversation';
 
@@ -51,7 +52,7 @@ export const useDistillerStore = create<DistillerState>((set, get) => ({
 
     set({ distilling: true });
     try {
-      const res = await fetch('/api/distill', {
+      const res = await authFetch('/api/distill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -51,17 +51,22 @@ You will receive:
 - Recent transcript for context
 - A list of existing files in the prototype`;
 
-function readApiKey(): string | null {
-  return process.env.GOOGLE_API_KEY ?? null;
+function resolveGeminiKey(userKey?: string): string | null {
+  return userKey ?? process.env.GOOGLE_API_KEY ?? null;
 }
 
 export async function distill(
   message: string,
   transcript: TranscriptMessage[],
   fileList: string[],
+  apiKey?: string,
+  provider?: string,
 ): Promise<string> {
-  const apiKey = readApiKey();
-  if (!apiKey) return message;
+  // Distillation uses the Gemini API directly — skip for non-Gemini providers
+  if (provider && provider !== "gemini") return message;
+
+  const geminiKey = resolveGeminiKey(apiKey);
+  if (!geminiKey) return message;
 
   const transcriptText = transcript.length > 0
     ? `\n\nRecent transcript:\n${transcript.map((m) => `${m.role}: ${m.content}`).join("\n")}`
@@ -75,7 +80,7 @@ export async function distill(
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -143,9 +148,14 @@ interface ExtractedIdea {
 export async function distillIdeas(
   transcript: string,
   existingSuggestions: ExistingSuggestion[],
+  apiKey?: string,
+  provider?: string,
 ): Promise<ExtractedIdea[]> {
-  const apiKey = readApiKey();
-  if (!apiKey) return [];
+  // Idea distillation uses Gemini API directly — skip for non-Gemini providers
+  if (provider && provider !== "gemini") return [];
+
+  const geminiKey = resolveGeminiKey(apiKey);
+  if (!geminiKey) return [];
 
   const existingText = existingSuggestions.length > 0
     ? `\n\nExisting suggestions (do not duplicate):\n${existingSuggestions.map(s => `- ${s.title}: ${s.description}`).join("\n")}`
@@ -155,7 +165,7 @@ export async function distillIdeas(
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,7 +195,6 @@ export async function distillIdeas(
     if (!text) return [];
 
     const parsed = JSON.parse(text) as ExtractedIdea[];
-    // Filter low-confidence results
     return parsed.filter(idea => idea.confidence >= 0.3);
   } catch (err) {
     console.warn("distillIdeas failed:", err);

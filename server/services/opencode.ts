@@ -4,6 +4,27 @@ import path from "node:path";
 
 const SESSION_ROTATE_THRESHOLD = 8;
 
+const DEFAULT_MODELS: Record<string, string> = {
+  gemini: "google/gemini-2.5-flash",
+  anthropic: "anthropic/claude-sonnet-4-5-20250929",
+  openai: "openai/gpt-4o",
+  fireworks: "fireworks/accounts/fireworks/models/llama4-maverick-instruct-basic",
+};
+
+const ENV_KEY_MAP: Record<string, string> = {
+  gemini: "GOOGLE_API_KEY",
+  anthropic: "ANTHROPIC_API_KEY",
+  openai: "OPENAI_API_KEY",
+  fireworks: "FIREWORKS_API_KEY",
+};
+
+const PROVIDER_CONFIG_MAP: Record<string, string> = {
+  gemini: "google",
+  anthropic: "anthropic",
+  openai: "openai",
+  fireworks: "fireworks",
+};
+
 interface OpenCodeInstance {
   process: ChildProcess;
   port: number;
@@ -11,25 +32,55 @@ interface OpenCodeInstance {
   projectDir: string;
   sessionId: string | null;
   messageCount: number;
+  provider?: string;
+  model?: string;
+}
+
+export interface StartOptions {
+  apiKey?: string;
+  provider?: string; // 'gemini' | 'anthropic' | 'openai' | 'fireworks'
+  model?: string;
 }
 
 let active: OpenCodeInstance | null = null;
 let nextPort = 4096;
 
-// Copy opencode config into the project directory so it picks up our agent + provider settings.
-// Always overwrite to ensure latest agent prompt is used.
-function ensureConfig(projectDir: string): void {
+function ensureConfig(projectDir: string, opts?: StartOptions): void {
   const configDir = path.join(projectDir, ".opencode");
   fs.mkdirSync(configDir, { recursive: true });
 
+  // Load the base config to get agent definitions
   const srcConfig = path.join(process.cwd(), ".opencode", "opencode.json");
-  const destConfig = path.join(configDir, "opencode.json");
-
+  let baseConfig: Record<string, unknown> = {};
   if (fs.existsSync(srcConfig)) {
-    fs.copyFileSync(srcConfig, destConfig);
+    baseConfig = JSON.parse(fs.readFileSync(srcConfig, "utf-8"));
   }
 
-  // Clear any stale OpenCode session state so each server start is fresh
+  // Determine provider and model
+  const provider = opts?.provider || "gemini";
+  const providerKey = PROVIDER_CONFIG_MAP[provider] || "google";
+  const model = opts?.model || DEFAULT_MODELS[provider] || DEFAULT_MODELS.gemini;
+
+  // Build config with the right provider
+  const config: Record<string, unknown> = {
+    ...baseConfig,
+    model,
+    small_model: model,
+    provider: { [providerKey]: {} },
+  };
+
+  // Update agent model to match
+  if (config.agent && typeof config.agent === "object") {
+    const agentConfig = config.agent as Record<string, Record<string, unknown>>;
+    for (const agentName of Object.keys(agentConfig)) {
+      agentConfig[agentName].model = model;
+    }
+  }
+
+  const destConfig = path.join(configDir, "opencode.json");
+  fs.writeFileSync(destConfig, JSON.stringify(config, null, 2));
+
+  // Clear stale session state
   const sessionDir = path.join(configDir, "session");
   if (fs.existsSync(sessionDir)) {
     fs.rmSync(sessionDir, { recursive: true, force: true });
@@ -44,28 +95,43 @@ export function getActiveProjectId(): string | null {
   return active?.projectId ?? null;
 }
 
-export async function startForProject(projectId: string, projectDir: string): Promise<number> {
-  // If already running for this project, refresh config on disk and return existing port.
-  // Note: the running process still uses whatever config was loaded at spawn time —
-  // but a session rotation will pick up the fresh on-disk config for OpenCode impls
-  // that re-read config per session.
+export async function startForProject(
+  projectId: string,
+  projectDir: string,
+  opts?: StartOptions,
+): Promise<number> {
+  const provider = opts?.provider || "gemini";
+  const model = opts?.model || DEFAULT_MODELS[provider] || DEFAULT_MODELS.gemini;
+
+  // If same project but provider/model changed, force restart
   if (active?.projectId === projectId) {
-    ensureConfig(projectDir);
-    return active.port;
+    if (active.provider === provider && active.model === model) {
+      ensureConfig(projectDir, opts);
+      return active.port;
+    }
+    console.log(`[opencode] provider/model changed (${active.provider}/${active.model} → ${provider}/${model}), restarting`);
+    killOpenCode();
+  } else if (active) {
+    killOpenCode();
   }
 
-  // Kill any existing instance (different project)
-  killOpenCode();
-
-  ensureConfig(projectDir);
+  ensureConfig(projectDir, opts);
 
   const port = nextPort++;
-  console.log(`[opencode] starting for project ${projectId} at ${projectDir} on port ${port}`);
+  console.log(`[opencode] starting for project ${projectId} on port ${port} (${provider}/${model})`);
+
+  // Build env with the correct API key env var for the provider
+  const env: Record<string, string> = { ...process.env as Record<string, string> };
+  if (opts?.apiKey) {
+    const envVar = ENV_KEY_MAP[provider] || "GOOGLE_API_KEY";
+    env[envVar] = opts.apiKey;
+  }
 
   const child = spawn("opencode", ["serve", "--port", String(port)], {
     cwd: projectDir,
     stdio: ["ignore", "pipe", "pipe"],
     shell: true,
+    env,
   });
 
   child.stdout?.on("data", (data: Buffer) => {
@@ -86,14 +152,12 @@ export async function startForProject(projectId: string, projectDir: string): Pr
     if (active?.projectId === projectId) active = null;
   });
 
-  active = { process: child, port, projectId, projectDir, sessionId: null, messageCount: 0 };
-
+  active = { process: child, port, projectId, projectDir, sessionId: null, messageCount: 0, provider, model };
   await waitForReady(port);
-
   return port;
 }
 
-async function waitForReady(port: number, timeoutMs = 10000): Promise<void> {
+async function waitForReady(port: number, timeoutMs = 30000): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
@@ -106,8 +170,6 @@ async function waitForReady(port: number, timeoutMs = 10000): Promise<void> {
   }
   console.warn("[opencode] timed out waiting for server to start");
 }
-
-// --- Session management (keyed by project, not port) ---
 
 async function createSession(): Promise<string> {
   if (!active) throw new Error("No active OpenCode instance");

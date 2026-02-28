@@ -1,17 +1,15 @@
 import { Router, type Request, type Response } from "express";
-import path from "node:path";
-import os from "node:os";
+import { projectDir } from "../services/project-paths.js";
+import { validateProjectOwnership } from "../middleware/ownership.js";
 import { autoCommit, getLog, revertTo } from "../services/git.js";
-
-const PROJECTS_DIR = path.join(os.homedir(), ".riffboard", "projects");
-
-function projectDir(id: string): string {
-  return path.join(PROJECTS_DIR, id);
-}
+import { getAuth } from "../types.js";
 
 const router = Router();
 
-router.post("/:id/commit", async (req: Request<{ id: string }>, res: Response) => {
+router.use("/:id", validateProjectOwnership);
+
+router.post("/:id/commit", async (req: Request, res: Response) => {
+  const { userId } = getAuth(req);
   const { message } = req.body as { message: string };
 
   if (!message) {
@@ -20,7 +18,7 @@ router.post("/:id/commit", async (req: Request<{ id: string }>, res: Response) =
   }
 
   try {
-    const sha = await autoCommit(projectDir(req.params.id), message);
+    const sha = await autoCommit(projectDir(userId, req.params.id as string), message);
     res.json({ sha });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -28,9 +26,11 @@ router.post("/:id/commit", async (req: Request<{ id: string }>, res: Response) =
   }
 });
 
-router.get("/:id/log", async (req: Request<{ id: string }>, res: Response) => {
+router.get("/:id/log", async (req: Request, res: Response) => {
+  const { userId } = getAuth(req);
+
   try {
-    const log = await getLog(projectDir(req.params.id));
+    const log = await getLog(projectDir(userId, req.params.id as string));
     res.json(log);
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
@@ -38,7 +38,8 @@ router.get("/:id/log", async (req: Request<{ id: string }>, res: Response) => {
   }
 });
 
-router.post("/:id/revert", async (req: Request<{ id: string }>, res: Response) => {
+router.post("/:id/revert", async (req: Request, res: Response) => {
+  const { userId } = getAuth(req);
   const { sha } = req.body as { sha: string };
 
   if (!sha) {
@@ -47,7 +48,7 @@ router.post("/:id/revert", async (req: Request<{ id: string }>, res: Response) =
   }
 
   try {
-    const newSha = await revertTo(projectDir(req.params.id), sha);
+    const newSha = await revertTo(projectDir(userId, req.params.id as string), sha);
     res.json({ sha: newSha });
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);

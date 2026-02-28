@@ -1,0 +1,41 @@
+# fly.toml app configuration file generated for riffboard on 2026-02-27T14:57:35-08:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'riffboard'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+  [build.args]
+    VITE_CLERK_PUBLISHABLE_KEY = 'pk_test_d2lsbGluZy13aGFsZS01Mi5jbGVyay5hY2NvdW50cy5kZXYk'
+
+[env]
+  DATA_DIR = '/data'
+  DB_PATH = '/data/riffboard.db'
+  NODE_ENV = 'production'
+  PORT = '3456'
+
+[[mounts]]
+  source = 'riffboard_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 3456
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = '30s'
+    timeout = '3s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '1024mb'

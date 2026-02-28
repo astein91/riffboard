@@ -5,6 +5,7 @@ import { useIdeasStore } from '../stores/ideas';
 import { useModeStore } from '../stores/mode';
 import { useDistillerStore } from '../stores/distiller';
 import { useTranscriptStore } from '../stores/transcript';
+import { useSettingsStore, hasAiKey } from '../stores/settings';
 import { ChatInput } from './ChatInput';
 import { ChatMessage } from './ChatMessage';
 import { TranscriptOverlay } from './TranscriptOverlay';
@@ -17,7 +18,12 @@ export function ChatPanel() {
   const mode = useModeStore(s => s.mode);
   const appendTranscript = useDistillerStore(s => s.appendTranscript);
   const micStatus = useTranscriptStore(s => s.micStatus);
+  const configured = useSettingsStore(s => s.configured);
+  const loadKeys = useSettingsStore(s => s.loadKeys);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Load key config on mount so the input gate works
+  useEffect(() => { loadKeys(); }, [loadKeys]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -88,7 +94,7 @@ export function ChatPanel() {
       </div>
 
       {/* Chat mode: text input. Riff mode: no text input needed. */}
-      {!isRiff && <ChatInput onSend={handleSend} />}
+      {!isRiff && <ChatInput onSend={handleSend} hasKey={hasAiKey(configured)} />}
     </div>
   );
 }

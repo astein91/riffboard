@@ -4,11 +4,14 @@ import cors from "cors";
 import { WebSocketServer, WebSocket } from "ws";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { clerkMiddleware, requireAuth } from "@clerk/express";
+import { runMigrations } from "./db/migrate.js";
 import projectRoutes from "./routes/projects.js";
 import gitRoutes from "./routes/git.js";
 import distillRoutes from "./routes/distill.js";
 import prototypeRoutes from "./routes/prototype.js";
 import apiKeysRoutes from "./routes/apiKeys.js";
+import preferencesRoutes from "./routes/preferences.js";
 import { killOpenCode } from "./services/opencode.js";
 import { bridgeToDeepgram } from "./services/deepgram.js";
 
@@ -17,21 +20,27 @@ const __dirname = dirname(__filename);
 
 const PORT = parseInt(process.env.PORT || '3456', 10);
 
+// Run DB migrations on startup
+runMigrations();
+
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(clerkMiddleware());
 
-app.use("/api/projects", projectRoutes);
-app.use("/api/git", gitRoutes);
-app.use("/api", distillRoutes);
-app.use("/api", prototypeRoutes);
-app.use("/api", apiKeysRoutes);
-
-// Health check endpoint
+// Health check (unauthenticated)
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "riffboard", port: PORT });
 });
+
+// All /api routes require auth
+app.use("/api/projects", requireAuth(), projectRoutes);
+app.use("/api/git", requireAuth(), gitRoutes);
+app.use("/api", requireAuth(), distillRoutes);
+app.use("/api", requireAuth(), prototypeRoutes);
+app.use("/api", requireAuth(), apiKeysRoutes);
+app.use("/api/user", requireAuth(), preferencesRoutes);
 
 // Serve static frontend files in production
 if (process.env.NODE_ENV === 'production') {
