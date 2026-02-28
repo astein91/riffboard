@@ -11,11 +11,11 @@ const DEFAULT_MODELS: Record<string, string> = {
   fireworks: "fireworks/accounts/fireworks/models/llama4-maverick-instruct-basic",
 };
 
-const ENV_KEY_MAP: Record<string, string> = {
-  gemini: "GOOGLE_API_KEY",
-  anthropic: "ANTHROPIC_API_KEY",
-  openai: "OPENAI_API_KEY",
-  fireworks: "FIREWORKS_API_KEY",
+const ENV_KEY_MAP: Record<string, string[]> = {
+  gemini: ["GOOGLE_GENERATIVE_AI_API_KEY", "GOOGLE_API_KEY"],
+  anthropic: ["ANTHROPIC_API_KEY"],
+  openai: ["OPENAI_API_KEY"],
+  fireworks: ["FIREWORKS_API_KEY"],
 };
 
 const PROVIDER_CONFIG_MAP: Record<string, string> = {
@@ -120,11 +120,13 @@ export async function startForProject(
   const port = nextPort++;
   console.log(`[opencode] starting for project ${projectId} on port ${port} (${provider}/${model})`);
 
-  // Build env with the correct API key env var for the provider
+  // Build env with the correct API key env var(s) for the provider
   const env: Record<string, string> = { ...process.env as Record<string, string> };
   if (opts?.apiKey) {
-    const envVar = ENV_KEY_MAP[provider] || "GOOGLE_API_KEY";
-    env[envVar] = opts.apiKey;
+    const envVars = ENV_KEY_MAP[provider] || ["GOOGLE_GENERATIVE_AI_API_KEY"];
+    for (const v of envVars) {
+      env[v] = opts.apiKey;
+    }
   }
 
   const child = spawn("opencode", ["serve", "--port", String(port)], {
@@ -227,11 +229,14 @@ export async function sendPrompt(projectId: string, prompt: string): Promise<str
 
   active.messageCount++;
 
-  const data = (await res.json()) as {
-    parts: Array<{ type: string; text?: string }>;
-  };
+  const data = await res.json();
+  console.log(`[opencode:${active.projectId.slice(0, 8)}] response keys: ${JSON.stringify(Object.keys(data))}`);
+  console.log(`[opencode:${active.projectId.slice(0, 8)}] response preview: ${JSON.stringify(data).slice(0, 500)}`);
 
-  const textParts = data.parts
+  // Handle various response shapes from OpenCode
+  const parts: Array<{ type: string; text?: string }> = data.parts ?? [];
+
+  const textParts = parts
     .filter((p) => p.type === "text" && p.text)
     .map((p) => p.text!);
 
